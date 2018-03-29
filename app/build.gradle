@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 22
-    buildToolsVersion '25.0.0'
+    buildToolsVersion '26.0.2'
 
     defaultConfig {
         applicationId "com.fieldbook.tracker"
@@ -17,10 +17,11 @@ android {
 
             signingConfig getSigningConfig()
             applicationVariants.all { variant ->
-                variant.outputs.each { output ->
+                variant.outputs.all { output ->
                     def newName = output.outputFile.name
                     newName = newName.replace("app-release", "Field-Book")
-                    output.outputFile = new File(output.outputFile.parent, newName)
+                    outputFileName = "${variant.name}-${variant.versionName}.apk"
+                    //output.outputFile = new File(output.outputFile.parent, newName)
                 }
             }
         }

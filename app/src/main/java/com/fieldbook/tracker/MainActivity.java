@@ -146,6 +146,8 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
     private static String TAG = "Field Book";
     private Handler repeatHandler;
 
+    private DataMonitor dataMonitor;
+
     /**
      * Main screen elements
      */
@@ -317,6 +319,8 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             startActivity(intent);
             updateAssets();
         }
+
+        dataMonitor = new DataMonitor(this);
     }
 
     private void updateAssets() {
@@ -1870,6 +1874,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         drop2Selection = drop2prefix.getSelectedItemPosition();
         drop3Selection = drop3prefix.getSelectedItemPosition();
 
+
         initWidgets(true);
     }
 
@@ -1932,15 +1937,19 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                                            int pos, long arg3) {
                     try {
 
-                        if (savePrefix)
+                        if (savePrefix) {
                             drop1Selection = pos;
+                        }
+
 
                         myList1 = dt.getDropDownRange(prefixTraits[pos], cRange.plot_id);
-
+                        String ssTmp1 = drop1prefix.getSelectedItem().toString();
                         if (myList1 == null) {
                             drop1.setText(getString(R.string.nodata));
+                            dataMonitor.setDrop1(ssTmp1, getString(R.string.nodata));
                         } else
                             drop1.setText(myList1[0]);
+                            dataMonitor.setDrop1(ssTmp1, myList1[0]);
                             Editor e = ep.edit();
                             e.putString("DROP1", prefixTraits[pos]);
                             e.apply();
@@ -1964,15 +1973,18 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                                            int pos, long arg3) {
 
                     try {
-                        if (savePrefix)
+                        if (savePrefix) {
                             drop2Selection = pos;
+                        }
 
                         myList2 = dt.getDropDownRange(prefixTraits[pos], cRange.plot_id);
-
+                        String ssTmp2 = drop2prefix.getSelectedItem().toString();
                         if (myList2 == null) {
                             drop2.setText(getString(R.string.nodata));
+                            dataMonitor.setDrop2(ssTmp2, getString(R.string.nodata));
                         } else
                             drop2.setText(myList2[0]);
+                            dataMonitor.setDrop2(ssTmp2, myList2[0]);
                             Editor e = ep.edit();
                             e.putString("DROP2", prefixTraits[pos]);
                             e.apply();
@@ -1995,15 +2007,18 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                                            int pos, long arg3) {
 
                     try {
-                        if (savePrefix)
+                        if (savePrefix) {
                             drop3Selection = pos;
+                        }
 
                         myList3 = dt.getDropDownRange(prefixTraits[pos], cRange.plot_id);
-
+                        String ssTmp3 = drop3prefix.getSelectedItem().toString();
                         if (myList3 == null) {
                             drop3.setText(getString(R.string.nodata));
+                            dataMonitor.setDrop3(ssTmp3, getString(R.string.nodata));
                         } else
                             drop3.setText(myList3[0]);
+                            dataMonitor.setDrop3(ssTmp3, myList3[0]);
                             Editor e = ep.edit();
                             e.putString("DROP3", prefixTraits[pos]);
                             e.apply();
