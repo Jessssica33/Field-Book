@@ -146,7 +146,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
     private static String TAG = "Field Book";
     private Handler repeatHandler;
 
-    private DataMonitor dataMonitor;
 
     /**
      * Main screen elements
@@ -277,6 +276,9 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
     private Boolean dataLocked = false;
 
+    private DataMonitor dataMonitor;
+    private Intent serviceIntent;
+
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
@@ -320,7 +322,10 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             updateAssets();
         }
 
+        serviceIntent = new Intent(this, DataTransferService.class);
+        startService(serviceIntent);
         dataMonitor = new DataMonitor(this);
+
     }
 
     private void updateAssets() {
@@ -3123,6 +3128,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         // Always close the database connection when the app ends
         dt.close();
 
+        stopService(serviceIntent);
         super.onDestroy();
     }
 

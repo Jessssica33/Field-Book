@@ -23,7 +23,7 @@ public class DataMonitor {
     public DataMonitor(Context context) {
         this.context = context;
         intent = new Intent();
-        intent.setAction("com.fieldbook.tracker.utilities.DATA_CHANGE");
+        intent.setAction("com.fieldbook.tracker.DATA_CHANGE");
     }
 
     //public String getDrop1 () {return drop1;}
@@ -31,7 +31,7 @@ public class DataMonitor {
 
         this.drop1 = drop1;
         this.content1 = content1;
-        intent.putExtra("data", drop1 + " " + content1);
+        intent.putExtra("data", "drop1 " + drop1 + " " + content1 + " ");
         context.sendBroadcast(intent);
         Log.i("info", "sendBroadcast: " + drop1 + " " + content1);
     }
@@ -41,7 +41,7 @@ public class DataMonitor {
 
         this.drop2 = drop2;
         this.content2 = content2;
-        intent.putExtra("data", drop2 + " " + content2);
+        intent.putExtra("data", "drop2 " + drop2 + " " + content2 + " ");
         context.sendBroadcast(intent);
         Log.i("info", "sendBroadcast: " + drop2 + " " + content2);
     }
@@ -51,7 +51,7 @@ public class DataMonitor {
 
         this.drop3 = drop3;
         this.content3 = content3;
-        intent.putExtra("data", drop3 + " " + content3);
+        intent.putExtra("data", "drop3 " + drop3 + " " + content3 + " ");
         context.sendBroadcast(intent);
         Log.i("info", "sendBroadcast: " + drop3 + " " + content3);
     }
