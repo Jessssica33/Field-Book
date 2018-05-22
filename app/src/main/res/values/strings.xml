@@ -52,6 +52,7 @@
     <string name="advanced">Advanced</string>
     <string name="language">Language</string>
     <string name="updatemsg">Changelog</string>
+    <string name="devices">Devices</string>
 
     <string name="sampledata">Sample data</string>
     <string name="loadsampledata">Would you like to load the sample data provided?</string>

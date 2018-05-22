@@ -1,6 +1,10 @@
 package com.fieldbook.tracker;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.provider.MediaStore;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -42,6 +46,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.ListView;
 import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -61,6 +66,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Settings Screen
@@ -80,6 +86,7 @@ public class ConfigActivity extends AppCompatActivity {
     private AlertDialog advancedDialog;
     private AlertDialog setupDialog;
     private AlertDialog dbSaveDialog;
+    private AlertDialog deviceDialog;
 
     private String mChosenFile = "";
 
@@ -212,7 +219,7 @@ public class ConfigActivity extends AppCompatActivity {
 
         String[] items2 = new String[]{getString(R.string.fields),
                 getString(R.string.traits), getString(R.string.profile), getString(R.string.export), getString(R.string.advanced),
-                getString(R.string.language)}; //, "API Test"};
+                getString(R.string.language), getString(R.string.devices)}; //, "API Test"};
 
         settingsList.setOnItemClickListener(new OnItemClickListener() {
             public void onItemClick(AdapterView<?> av, View arg1, int position, long arg3) {
@@ -263,6 +270,16 @@ public class ConfigActivity extends AppCompatActivity {
                     //            BrapiActivity.class.getName());
                     //    startActivity(intent);
                     //    break;
+                    case 6:
+                        /*Bundle extras = getIntent().getExtras();
+                        String[] values = null;
+                        if (extras != null) {
+
+                            values = extras.getStringArray("devices");
+                        }*/
+                        showDevicesDialog();
+                        break;
+
                 }
             }
         });
@@ -292,6 +309,74 @@ public class ConfigActivity extends AppCompatActivity {
             showTipsDialog();
             loadSampleDataDialog();
         }
+    }
+
+    private void showDevicesDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.AppAlertDialog);
+
+        LayoutInflater inflater = this.getLayoutInflater();
+        View layout = inflater.inflate(R.layout.dialog_devices, null);
+
+        builder.setTitle(R.string.devices)
+                .setCancelable(true)
+                .setView(layout);
+
+        deviceDialog = builder.create();
+
+        android.view.WindowManager.LayoutParams params = deviceDialog.getWindow().getAttributes();
+        params.width = LayoutParams.MATCH_PARENT;
+        deviceDialog.getWindow().setAttributes(params);
+
+        /////////////////////////////
+
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        Set<BluetoothDevice> pairedDevices = adapter.getBondedDevices();
+
+        RadioGroup rg = (RadioGroup) layout.findViewById(R.id.deviceRadio);
+        final String deviceName = ep.getString("BluetoothDevice", "DEFAULT");
+        Log.i("device name", deviceName);
+        int id = 0;
+        int checked = -1;
+        for (BluetoothDevice device: pairedDevices) {
+            String tmp = device.getName();
+            if (deviceName.equals(tmp)) {
+                checked = id;
+            }
+            RadioButton rb = new RadioButton(this);
+            rb.setText(tmp);
+            rb.setId(id);
+            ++id;
+            rg.addView(rb);
+        }
+
+        if (checked != -1) {
+            rg.check(checked);
+        }
+
+        deviceDialog.show();
+
+        rg.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup radioGroup, int i) {
+                //RadioButton b = (RadioButton) radioGroup.getChildAt(0);
+                int radioID = radioGroup.getCheckedRadioButtonId();
+                View radioButton = radioGroup.findViewById(radioID);
+                int idx = radioGroup.indexOfChild(radioButton);
+                RadioButton r = (RadioButton) radioGroup.getChildAt(idx);
+                String dname = r.getText().toString();
+                Log.i("Setting devices", "connect " + dname);
+
+                if (!dname.equals(deviceName)) {
+                    SharedPreferences.Editor prefEditor = ep.edit();
+                    prefEditor.putString("BluetoothDevice", dname);
+                    prefEditor.commit();
+
+                    Intent intent = new Intent();
+                    intent.setAction("com.fieldbook.tracker.BluetoothServer.DEVICECHANGE");
+                    thisActivity.sendBroadcast(intent);
+                }
+            }
+        });
     }
 
 

@@ -1,9 +1,12 @@
 package com.fieldbook.tracker;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -20,23 +23,58 @@ import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
+import java.util.Set;
+
 public class DataTransferService extends Service {
 
     private BluetoothServer mBluetoothServer;
     private ActivityReceiver mActivityReceiver;
     private IntentFilter mIntentFilter;
+    private BluetoothAdapter mAdapter;
+    private BluetoothDevice mDevice = null;
+
+    private final String TAG = "DataTransferService";
+    //private Set<BluetoothDevice> mPairedDevices;
+
 
     @Override
     public void onCreate() {
 
-        mBluetoothServer = new BluetoothServer(this);
         mActivityReceiver = new ActivityReceiver();
         mIntentFilter = new IntentFilter();
         mIntentFilter.addAction("com.fieldbook.tracker.DATA_CHANGE");
         mIntentFilter.addAction("com.fieldbook.tracker.BluetoothServer.STATUSCHANGE");
+        mIntentFilter.addAction("com.fieldbook.tracker.BluetoothServer.DEVICECHANGE");
         registerReceiver(mActivityReceiver, mIntentFilter);
-        mBluetoothServer.init();
 
+        mAdapter = BluetoothAdapter.getDefaultAdapter();
+        mBluetoothServer = new BluetoothServer(this);
+        startBluetoothConnection();
+
+    }
+
+    private void startBluetoothConnection() {
+        getDefaultDevice();
+        if (mDevice != null) {
+            mBluetoothServer.init(mDevice, mAdapter);
+        }
+    }
+
+    private void getDefaultDevice() {
+        SharedPreferences setting = getSharedPreferences("Settings", 0);
+        String name = setting.getString("BluetoothDevice", "DEFAULT");
+        if (!name.equals("DEFAULT")) {
+            Set<BluetoothDevice> paired = mAdapter.getBondedDevices();
+            for (BluetoothDevice device: paired) {
+                if (device.getName().equals(name)) {
+                    mDevice = device;
+                    Log.i(TAG, "Try to creat bluetooth connection to " + device.getName());
+                    break;
+                }
+            }
+        } else {
+            Log.e("DataTransferService", "No boundled device, please go to setting choose devices");
+        }
     }
 
     @Override
@@ -57,6 +95,7 @@ public class DataTransferService extends Service {
         super.onDestroy();
     }
 
+
     private class ActivityReceiver extends BroadcastReceiver {
 
         @Override
@@ -72,7 +111,12 @@ public class DataTransferService extends Service {
             } else if (action.equals("com.fieldbook.tracker.BluetoothServer.STATUSCHANGE")) {
                 data = intent.getExtras().getString("message");
                 mBluetoothServer.cancelConnection();
-                mBluetoothServer.init();
+                startBluetoothConnection();
+
+            } else if (action.equals("com.fieldbook.tracker.BluetoothServer.DEVICECHANGE")) {
+                Log.e("error", "======receive setting change event");
+                mBluetoothServer.cancelConnection();
+                startBluetoothConnection();
 
             }
 

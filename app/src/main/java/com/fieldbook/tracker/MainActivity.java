@@ -1587,6 +1587,10 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
             case R.id.nav_settings:
                 Intent a = new Intent(this, ConfigActivity.class);
+                ///////
+                String[] devices = {"aa", "bb", "cc"};
+                a.putExtra("devices", devices);
+                ///////
                 startActivity(a);
                 break;
 

@@ -37,13 +37,14 @@ public class BluetoothServer {
     public BluetoothServer(Context context) {
         //mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         mContext = context;
+
         mIntentSender = new Intent();
         mIntentSender.setAction("com.fieldbook.tracker.BluetoothServer.STATUSCHANGE");
     }
 
-    public int init() {
+    public int init(BluetoothDevice device, BluetoothAdapter adapter) {
 
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        /*mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
             Log.e(TAG, "Cannot get bluetooth adapter");
             return -1;
@@ -63,7 +64,10 @@ public class BluetoothServer {
                     break;
                 }
             }
-        }
+        }*/
+
+        mDevice = device;
+        mBluetoothAdapter = adapter;
 
         if (mDevice == null) {
             Log.e(TAG, "Cannot find pairedDevice");
