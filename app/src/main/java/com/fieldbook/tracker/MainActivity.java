@@ -1,6 +1,8 @@
 package com.fieldbook.tracker;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -278,6 +280,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
     private DataMonitor dataMonitor;
     private Intent serviceIntent;
+    private VoiceCmdReceiver voiceCmdReceiver;
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -298,6 +301,11 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         config2.locale = locale2;
         getBaseContext().getResources().updateConfiguration(config2, getBaseContext().getResources()
                 .getDisplayMetrics());
+
+        serviceIntent = new Intent(this, DataTransferService.class);
+        startService(serviceIntent);
+        dataMonitor = new DataMonitor(this);
+        startVoiceCmdReceiver();
 
         loadScreen();
 
@@ -321,11 +329,13 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             startActivity(intent);
             updateAssets();
         }
+    }
 
-        serviceIntent = new Intent(this, DataTransferService.class);
-        startService(serviceIntent);
-        dataMonitor = new DataMonitor(this);
-
+    private void startVoiceCmdReceiver() {
+        voiceCmdReceiver = new VoiceCmdReceiver();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("com.fieldbook.tracker.BluetoothServer.VOICECMD");
+        registerReceiver(voiceCmdReceiver, intentFilter);
     }
 
     private void updateAssets() {
@@ -769,6 +779,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
         rangeName.setText(primaryName);
         plotName.setText(secondaryName);
+        dataMonitor.setRangePlotName(primaryName, secondaryName);
 
         rangeName.setOnTouchListener(new OnTouchListener() {
             @Override
@@ -1121,83 +1132,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         // Go to previous range
         rangeLeft.setOnClickListener(new OnClickListener() {
             public void onClick(View arg0) {
-                if(ep.getBoolean("DisableEntryNavLeft",false) && !newTraits.containsKey(currentTrait.trait)) {
-
-                    try {
-                        int resID = getResources().getIdentifier("error", "raw", getPackageName());
-                        MediaPlayer chimePlayer = MediaPlayer.create(MainActivity.this, resID);
-                        chimePlayer.start();
-
-                        chimePlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                            public void onCompletion(MediaPlayer mp) {
-                                mp.release();
-                            }
-                        });
-                    } catch (Exception ignore) {
-                    }
-
-                } else {
-                    if (rangeID != null && rangeID.length > 0) {
-                        //index.setEnabled(true);
-
-                        // If ignore existing data is enabled, then skip accordingly
-                        if (ep.getBoolean("IgnoreExisting", false)) {
-                            int pos = paging;
-
-                            while (pos >= 0) {
-                                pos -= 1;
-
-                                if (pos < 1)
-                                    return;
-
-                                if (!dt.getTraitExists(rangeID[pos - 1], currentTrait.trait,
-                                        currentTrait.format)) {
-                                    paging = pos;
-                                    break;
-                                }
-                            }
-                        } else {
-                            paging -= 1;
-
-                            if (paging < 1)
-                                paging = rangeID.length;
-                        }
-
-                        // Refresh onscreen controls
-                        cRange = dt.getRange(rangeID[paging - 1]);
-
-                        Editor ed = ep.edit();
-                        ed.putString("lastplot",cRange.plot_id);
-                        ed.apply();
-
-                        displayRange(cRange);
-
-                        if (ep.getBoolean("RangeSound", false)) {
-                            if (!cRange.range.equals(lastRange) && !lastRange.equals("")) {
-                                lastRange = cRange.range;
-
-                                try {
-                                    int resID = getResources().getIdentifier("plonk", "raw", getPackageName());
-                                    MediaPlayer chimePlayer = MediaPlayer.create(MainActivity.this, resID);
-                                    chimePlayer.start();
-
-                                    chimePlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                                        public void onCompletion(MediaPlayer mp) {
-                                            mp.release();
-                                        }
-                                    });
-                                } catch (Exception ignore) {
-                                }
-                            }
-                        }
-
-                        newTraits = (HashMap) dt.getUserDetail(cRange.plot_id)
-                                .clone();
-
-                        initWidgets(true);
-                    }
-                }
-
+                rangeLeftRightClickEvent(0, "DisableEntryNavLeft");
             }
         });
 
@@ -1244,88 +1179,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         // Go to next range
         rangeRight.setOnClickListener(new OnClickListener() {
             public void onClick(View arg0) {
-
-                if(ep.getBoolean("DisableEntryNavRight", false) && !newTraits.containsKey(currentTrait.trait)) {
-
-                    try {
-                        int resID = getResources().getIdentifier("error", "raw", getPackageName());
-                        MediaPlayer chimePlayer = MediaPlayer.create(MainActivity.this, resID);
-                        chimePlayer.start();
-
-                        chimePlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                            public void onCompletion(MediaPlayer mp) {
-                                mp.release();
-                            };
-                        });
-                    } catch (Exception ignore) {
-                    }
-
-                } else {
-                    if (rangeID != null && rangeID.length > 0) {
-                        //index.setEnabled(true);
-
-                        // If ignore existing data is enabled, then skip accordingly
-                        if (ep.getBoolean("IgnoreExisting", false)) {
-                            int pos = paging;
-
-                            if (pos == rangeID.length) {
-                                pos = 1;
-                                return;
-                            }
-
-                            while (pos <= rangeID.length) {
-                                pos += 1;
-
-                                if (pos > rangeID.length) {
-                                    pos = 1;
-                                    return;
-                                }
-
-                                if (!dt.getTraitExists(rangeID[pos - 1], currentTrait.trait,
-                                        currentTrait.format)) {
-                                    paging = pos;
-                                    break;
-                                }
-                            }
-                        } else {
-                            paging += 1;
-
-                            if (paging > rangeID.length)
-                                paging = 1;
-                        }
-
-                        // Refresh onscreen controls
-                        cRange = dt.getRange(rangeID[paging - 1]);
-
-                        Editor ed = ep.edit();
-                        ed.putString("lastplot",cRange.plot_id);
-                        ed.apply();
-
-                        displayRange(cRange);
-                        if (ep.getBoolean("RangeSound", false)) {
-                            if (!cRange.range.equals(lastRange) && !lastRange.equals("")) {
-                                lastRange = cRange.range;
-
-                                try {
-                                    int resID = getResources().getIdentifier("plonk", "raw", getPackageName());
-                                    MediaPlayer chimePlayer = MediaPlayer.create(MainActivity.this, resID);
-                                    chimePlayer.start();
-
-                                    chimePlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                                        public void onCompletion(MediaPlayer mp) {
-                                            mp.release();
-                                        }
-                                    });
-                                } catch (Exception ignore) {
-                                }
-                            }
-                        }
-                        newTraits = (HashMap) dt.getUserDetail(cRange.plot_id)
-                                .clone();
-
-                        initWidgets(true);
-                    }
-                }
+                rangeLeftRightClickEvent(1, "DisableEntryNavRight");
             }
         });
 
@@ -1360,26 +1214,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             public void onClick(View arg0) {
                 // Force the keyboard to be hidden
                 // This is meant to handle the keyboard bug
-                try {
-                    imm.hideSoftInputFromWindow(etCurVal.getWindowToken(), 0);
-                } catch (Exception ignore) {
-                }
-
-                try {
-                    imm.hideSoftInputFromWindow(etCurVal.getWindowToken(), 0);
-                } catch (Exception ignore) {
-                }
-
-                int pos = traitType.getSelectedItemPosition() - 1;
-
-                if (pos < 0) {
-                    pos = traitType.getCount() - 1;
-
-                    if (ep.getBoolean("CycleTraits", false))
-                        rangeLeft.performClick();
-                }
-
-                traitType.setSelection(pos);
+                traitLeftRightClickEvent(0);
             }
         });
 
@@ -1410,28 +1245,155 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             public void onClick(View arg0) {
                 // Force the keyboard to be hidden
                 // This is meant to handle the keyboard bug
-                try {
-                    imm.hideSoftInputFromWindow(etCurVal.getWindowToken(), 0);
-                } catch (Exception ignore) {
-                }
-
-                try {
-                    imm.hideSoftInputFromWindow(etCurVal.getWindowToken(), 0);
-                } catch (Exception ignore) {
-                }
-
-                int pos = traitType.getSelectedItemPosition() + 1;
-
-                if (pos > traitType.getCount() - 1) {
-                    pos = 0;
-
-                    if (ep.getBoolean("CycleTraits", false))
-                        rangeRight.performClick();
-                }
-
-                traitType.setSelection(pos);
+                traitLeftRightClickEvent(1);
             }
         });
+    }
+
+    public void rangeLeftRightClickEvent(int isRight, String navInfo) { //0 means left, 1 means right
+        if(ep.getBoolean(navInfo, false) && !newTraits.containsKey(currentTrait.trait)) {
+
+            try {
+                int resID = getResources().getIdentifier("error", "raw", getPackageName());
+                MediaPlayer chimePlayer = MediaPlayer.create(MainActivity.this, resID);
+                chimePlayer.start();
+
+                chimePlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    public void onCompletion(MediaPlayer mp) {
+                        mp.release();
+                    };
+                });
+            } catch (Exception ignore) {
+            }
+
+        } else {
+            if (rangeID != null && rangeID.length > 0) {
+                //index.setEnabled(true);
+
+                // If ignore existing data is enabled, then skip accordingly
+                if (isRight == 0) { // left
+                    //index.setEnabled(true);
+                    // If ignore existing data is enabled, then skip accordingly
+                    if (ep.getBoolean("IgnoreExisting", false)) {
+                        int pos = paging;
+
+                        while (pos >= 0) {
+                            pos -= 1;
+
+                            if (pos < 1)
+                                return;
+
+                            if (!dt.getTraitExists(rangeID[pos - 1], currentTrait.trait,
+                                    currentTrait.format)) {
+                                paging = pos;
+                                break;
+                            }
+                        }
+                    } else {
+                        paging -= 1;
+
+                        if (paging < 1)
+                            paging = rangeID.length;
+                    }
+                } else { // right
+                    if (ep.getBoolean("IgnoreExisting", false)) {
+                        int pos = paging;
+
+                        if (pos == rangeID.length) {
+                            pos = 1;
+                            return;
+                        }
+
+                        while (pos <= rangeID.length) {
+                            pos += 1;
+
+                            if (pos > rangeID.length) {
+                                pos = 1;
+                                return;
+                            }
+
+                            if (!dt.getTraitExists(rangeID[pos - 1], currentTrait.trait,
+                                    currentTrait.format)) {
+                                paging = pos;
+                                break;
+                            }
+                        }
+                    } else {
+                        paging += 1;
+
+                        if (paging > rangeID.length)
+                            paging = 1;
+                    }
+                }
+
+                // Refresh onscreen controls
+                cRange = dt.getRange(rangeID[paging - 1]);
+
+                Editor ed = ep.edit();
+                ed.putString("lastplot",cRange.plot_id);
+                ed.apply();
+
+                displayRange(cRange);
+                if (ep.getBoolean("RangeSound", false)) {
+                    if (!cRange.range.equals(lastRange) && !lastRange.equals("")) {
+                        lastRange = cRange.range;
+
+                        try {
+                            int resID = getResources().getIdentifier("plonk", "raw", getPackageName());
+                            MediaPlayer chimePlayer = MediaPlayer.create(MainActivity.this, resID);
+                            chimePlayer.start();
+
+                            chimePlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                                public void onCompletion(MediaPlayer mp) {
+                                    mp.release();
+                                }
+                            });
+                        } catch (Exception ignore) {
+                        }
+                    }
+                }
+                newTraits = (HashMap) dt.getUserDetail(cRange.plot_id)
+                        .clone();
+
+                initWidgets(true);
+            }
+        }
+
+    }
+
+    public void traitLeftRightClickEvent(int isRight) { //0 means left, 1 means right
+        try {
+            imm.hideSoftInputFromWindow(etCurVal.getWindowToken(), 0);
+        } catch (Exception ignore) {
+        }
+
+        try {
+            imm.hideSoftInputFromWindow(etCurVal.getWindowToken(), 0);
+        } catch (Exception ignore) {
+        }
+
+        int pos = 0;
+        if (isRight == 0) { // trait left click
+            pos = traitType.getSelectedItemPosition() - 1;
+
+            if (pos < 0) {
+                pos = traitType.getCount() - 1;
+
+                if (ep.getBoolean("CycleTraits", false))
+                    rangeLeft.performClick();
+            }
+        } else { // trait right click
+            pos = traitType.getSelectedItemPosition() + 1;
+
+            if (pos > traitType.getCount() - 1) {
+                pos = 0;
+
+                if (ep.getBoolean("CycleTraits", false))
+                    rangeRight.performClick();
+            }
+        }
+        traitType.setSelection(pos);
+        dataMonitor.setTraitName(traitType.getSelectedItem().toString());
     }
 
     private void initToolbars() {
@@ -1901,6 +1863,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
         tvRange.setText(cRange.range);
         tvPlot.setText(cRange.plot);
+        dataMonitor.setRangePlotValue(cRange.range, cRange.plot);
     }
 
     // This is central to the application
@@ -1952,13 +1915,14 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
 
                         myList1 = dt.getDropDownRange(prefixTraits[pos], cRange.plot_id);
-                        String ssTmp1 = drop1prefix.getSelectedItem().toString();
+                        //String ssTmp1 = drop1prefix.getSelectedItem().toString();
+
                         if (myList1 == null) {
                             drop1.setText(getString(R.string.nodata));
-                            dataMonitor.setDrop1(ssTmp1, getString(R.string.nodata));
+                            dataMonitor.setDrop1(pos + 1, getString(R.string.nodata));
                         } else
                             drop1.setText(myList1[0]);
-                            dataMonitor.setDrop1(ssTmp1, myList1[0]);
+                            dataMonitor.setDrop1(pos + 1, myList1[0]);
                             Editor e = ep.edit();
                             e.putString("DROP1", prefixTraits[pos]);
                             e.apply();
@@ -1987,13 +1951,13 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                         }
 
                         myList2 = dt.getDropDownRange(prefixTraits[pos], cRange.plot_id);
-                        String ssTmp2 = drop2prefix.getSelectedItem().toString();
+                        //String ssTmp2 = drop2prefix.getSelectedItem().toString();
                         if (myList2 == null) {
                             drop2.setText(getString(R.string.nodata));
-                            dataMonitor.setDrop2(ssTmp2, getString(R.string.nodata));
+                            dataMonitor.setDrop2(pos + 1, getString(R.string.nodata));
                         } else
                             drop2.setText(myList2[0]);
-                            dataMonitor.setDrop2(ssTmp2, myList2[0]);
+                            dataMonitor.setDrop2(pos + 1, myList2[0]);
                             Editor e = ep.edit();
                             e.putString("DROP2", prefixTraits[pos]);
                             e.apply();
@@ -2021,13 +1985,13 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                         }
 
                         myList3 = dt.getDropDownRange(prefixTraits[pos], cRange.plot_id);
-                        String ssTmp3 = drop3prefix.getSelectedItem().toString();
+                        //String ssTmp3 = drop3prefix.getSelectedItem().toString();
                         if (myList3 == null) {
                             drop3.setText(getString(R.string.nodata));
-                            dataMonitor.setDrop3(ssTmp3, getString(R.string.nodata));
+                            dataMonitor.setDrop3(pos + 1, getString(R.string.nodata));
                         } else
                             drop3.setText(myList3[0]);
-                            dataMonitor.setDrop3(ssTmp3, myList3[0]);
+                            dataMonitor.setDrop3(pos + 1, myList3[0]);
                             Editor e = ep.edit();
                             e.putString("DROP3", prefixTraits[pos]);
                             e.apply();
@@ -2779,6 +2743,12 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                         etCurVal.setVisibility(EditText.VISIBLE);
                         etCurVal.setEnabled(true);
                     }
+
+                    dataMonitor.setTraitName(traitType.getSelectedItem().toString());
+                    Object tmp = newTraits.get(currentTrait.trait);
+                    if (tmp != null) {
+                        dataMonitor.setTraitValue(newTraits.get(currentTrait.trait).toString());
+                    }
                 }
 
                 public void onNothingSelected(AdapterView<?> arg0) {
@@ -2786,6 +2756,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             });
 
             traitType.setSelection(traitPosition);
+
         }
     }
 
@@ -3219,6 +3190,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
             rangeName.setText(primaryName);
             plotName.setText(secondaryName);
+            dataMonitor.setRangePlotName(primaryName, secondaryName);
 
             paging = 1;
 
@@ -3236,6 +3208,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
             initWidgets(false);
             traitType.setSelection(0);
+            dataMonitor.setTraitName(traitType.getSelectedItem().toString());
 
             // try to go to last saved plot
             if(ep.getString("lastplot",null)!=null) {
@@ -4312,5 +4285,42 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         }
 
         return truncated;
+    }
+
+    public class VoiceCmdReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+
+            String data;
+            if (action.equals("com.fieldbook.tracker.BluetoothServer.VOICECMD")) {
+                data = intent.getExtras().getString("voiceCmd");
+                dataAction(data);
+            }
+
+        }
+
+        private void dataAction(String data) {
+            String[] s = data.trim().split(" ");
+            if (s.length != 2) {
+                Log.w(TAG, "Wrong data message:" + data);
+                return;
+            }
+
+            if (s[0].equals("0")) { // trait mode
+                if (s[1].equals("next")) { // right click
+                    traitLeftRightClickEvent(1);
+                } else if (s[1].equals("back")) { // left click
+                    traitLeftRightClickEvent(0);
+                }
+            } else if (s[0].equals("1")) { // plot mode
+                if (s[1].equals("next")) { // right click
+                    rangeLeftRightClickEvent(1, "DisableEntryNavRight");
+                } else if (s[1].equals("back")) { //left click
+                    rangeLeftRightClickEvent(0, "DisableEntryNavLeft");
+                }
+            }
+        }
     }
 }

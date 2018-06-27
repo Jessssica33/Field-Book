@@ -32,6 +32,7 @@ public class BluetoothServer {
     private static final String TAG = "BluetoothServer";
 
     private Intent mIntentSender;
+    private Intent mIntentVoiceCmd;
     private Context mContext;
 
     public BluetoothServer(Context context) {
@@ -40,6 +41,8 @@ public class BluetoothServer {
 
         mIntentSender = new Intent();
         mIntentSender.setAction("com.fieldbook.tracker.BluetoothServer.STATUSCHANGE");
+        mIntentVoiceCmd = new Intent();
+        mIntentVoiceCmd.setAction("com.fieldbook.tracker.BluetoothServer.VOICECMD");
     }
 
     public int init(BluetoothDevice device, BluetoothAdapter adapter) {
@@ -224,6 +227,10 @@ public class BluetoothServer {
                 try {
                     // Read from the InputStream.
                     numBytes = mmInStream.read(mmBuffer);
+                    String s = new String(mmBuffer);
+                    Log.i(TAG, "Receive message from DataReceiver: " + s);
+                    mIntentVoiceCmd.putExtra("voiceCmd", s);
+                    mContext.sendBroadcast(mIntentVoiceCmd);
 
                 } catch (IOException e) {
                     Log.d(TAG, "Input stream was disconnected", e);

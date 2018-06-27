@@ -106,15 +106,15 @@ public class DataTransferService extends Service {
             String data;
             if (action.equals("com.fieldbook.tracker.DATA_CHANGE")) {
                 data = intent.getExtras().getString("data");
-
+                Log.i(TAG, data);
                 mBluetoothServer.write(data.getBytes());
+
             } else if (action.equals("com.fieldbook.tracker.BluetoothServer.STATUSCHANGE")) {
                 data = intent.getExtras().getString("message");
                 mBluetoothServer.cancelConnection();
                 startBluetoothConnection();
 
             } else if (action.equals("com.fieldbook.tracker.BluetoothServer.DEVICECHANGE")) {
-                Log.e("error", "======receive setting change event");
                 mBluetoothServer.cancelConnection();
                 startBluetoothConnection();
 
