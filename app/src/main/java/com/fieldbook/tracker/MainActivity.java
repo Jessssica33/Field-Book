@@ -3208,7 +3208,9 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
             initWidgets(false);
             traitType.setSelection(0);
-            dataMonitor.setTraitName(traitType.getSelectedItem().toString());
+            if (traitType.getSelectedItem() != null) {
+                dataMonitor.setTraitName(traitType.getSelectedItem().toString());
+            }
 
             // try to go to last saved plot
             if(ep.getString("lastplot",null)!=null) {
